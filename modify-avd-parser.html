@@ -4,15 +4,49 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Modify AVD Parser</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="modify-email.css">
 </head>
-<body>
-  <header class="site-header">
-    <h1>Modify AVD Parser for Email Template</h1>
+<body class="white-bg">
+  <header class="site-header" style="display:flex;gap:1rem;align-items:center;padding:1rem;background:linear-gradient(90deg,#ffffffcc,#f0f6ff);border-bottom:1px solid #e6eef8">
     <a class="btn" href="index.html">← Back</a>
+    <h1 style="margin:0">Modify AVD Parser for Email Template</h1>
   </header>
-  <main style="padding-top:1rem;">
-    <p class="intro">Placeholder for parser adjustments and email template preview.</p>
+
+  <main class="container">
+    <div class="card">
+      <h2>Input</h2>
+      <textarea id="raw" placeholder="Paste ServiceNow details here..."></textarea>
+      <div class="actions">
+        <button class="warn" id="parseBtn">🔍 Parse</button>
+        <button class="primary" id="sampleBtn">🧪 Fill Sample</button>
+        <button class="danger" id="clearRawBtn">🧹 Clear Input</button>
+      </div>
+
+      <div class="meta-fields">
+        <input id="ritm" placeholder="RITM number">
+        <input id="requestedFor" placeholder="Requested for">
+        <input id="avdName" placeholder="AVD Name">
+        <input id="modifyStandardFor" placeholder="Modify standard for">
+      </div>
+
+      <div class="actions">
+        <button class="success" id="copyBtn">📋 Copy</button>
+        <button class="primary" id="downloadBtn">⬇️ Download</button>
+        <button class="danger" id="clearFieldsBtn">🧼 Clear Fields</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Preview</h2>
+      <div id="preview" class="preview">AVD Modify request has been completed.
+
+RITM number:
+Requested for :
+AVD Name:
+Modify standard for :</div>
+    </div>
   </main>
+
+  <script src="modify-email.js"></script>
 </body>
 </html>
