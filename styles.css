@@ -1,0 +1,15 @@
+/* Basic reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg:#0f172a; --card:#0b1220; --accent:#6366f1; --muted:#94a3b8; --glass: rgba(255,255,255,0.03); }
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background: linear-gradient(180deg,#071029 0%, #071726 100%); color: #e6eef8; min-height: 100vh; padding: 2rem; }
+.site-header { display:flex; gap:1rem; align-items:center; margin-bottom:1.5rem; }
+.site-header h1 { font-size:1.5rem; color:var(--accent); }
+#search { margin-left:auto; background:var(--glass); border:1px solid rgba(255,255,255,0.04); padding:0.5rem 0.75rem; color:inherit; border-radius:8px; min-width:200px; }
+.apps-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:1rem; }
+.app-card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); padding:1rem; border-radius:12px; display:flex; flex-direction:column; gap:0.5rem; transition: transform .15s ease, box-shadow .15s ease; }
+.app-card:hover { transform: translateY(-6px); box-shadow: 0 8px 20px rgba(2,6,23,0.6); }
+.app-icon { width:56px; height:56px; }
+.app-card h2 { font-size:1rem; margin-top:0.25rem; color:#e6eef8; }
+.app-card p { color:var(--muted); font-size:0.88rem; margin-top:0.15rem; }
+.btn { margin-top:auto; display:inline-block; padding:0.5rem 0.75rem; background:var(--accent); color:white; border-radius:8px; text-decoration:none; font-weight:600; align-self:flex-start; }
+@media (max-width:520px){ body{padding:1rem} .site-header{flex-direction:column; align-items:flex-start} #search{width:100%; margin-left:0} }

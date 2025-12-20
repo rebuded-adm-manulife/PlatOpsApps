@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Timeline Creator</title>
+  <link rel="stylesheet" href="timeline.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="btn" href="index.html">← Back</a>
+    <h1>Timeline Creator</h1>
+  </header>
+
+  <main class="container">
+    <form id="timeline-form" class="timeline-form" autocomplete="off">
+      <div class="row meta-row">
+        <div style="display:flex;gap:12px;align-items:end">
+          <div style="flex:1">
+            <label for="activity-type">Activity Type</label>
+            <select id="activity-type" required>
+              <option>AKS Upgrade</option>
+              <option>Istio Upgrade</option>
+              <option>Config Server (RCS) Upgrade</option>
+              <option>HBT Upgrade</option>
+              <option>Certificate Renewal Istio Ingress Gateway</option>
+              <option>Certificate renewal for APIM</option>
+            </select>
+          </div>
+
+          <div style="width:220px">
+            <label for="change-number">Change Number</label>
+            <input id="change-number" type="text" placeholder="e.g. CHG-12345">
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <label for="canned-text">Canned Text</label>
+        <select id="canned-text">
+          <option value="">-- choose --</option>
+        </select>
+      </div>
+
+      <div class="row two-up">
+        <div>
+          <label for="timezone">Timezone</label>
+          <select id="timezone">
+            <option value="local">Local</option>
+            <option value="HKT">Hong Kong Time (HKT)</option>
+            <option value="EST">North America Time (EST)</option>
+            <option value="IST">India Time (IST)</option>
+          </select>
+        </div>
+
+        <div class="timezone-preview" aria-live="polite" id="timezone-preview">Current: --</div>
+      </div>
+
+      <div class="row">
+        <label for="custom-text">Custom Text</label>
+        <input type="text" id="custom-text" placeholder="Enter custom text...">
+      </div>
+
+      <div class="row actions">
+        <button class="btn add" id="add-timeline-btn" type="button">Add to Timeline</button>
+        <button class="btn clear" id="clear-activity-btn" type="button">Clear Activity Timeline</button>
+      </div>
+    </form>
+
+    <section class="timeline-section">
+      <div class="toolbar">
+        <div class="left">
+          <strong id="current-activity">Activity: AKS Upgrade</strong>
+        </div>
+        <div class="right">
+          <button class="btn small" id="copy-timeline-btn">Copy</button>
+          <button class="btn small" id="export-timeline-btn">Export .txt</button>
+        </div>
+      </div>
+
+      <ul id="timeline-list" class="timeline-list" aria-live="polite" aria-label="Timeline entries"></ul>
+
+      <p class="helper">Tip: click an entry to edit. Use the buttons to remove or move entries.</p>
+    </section>
+  </main>
+
+  <script src="timeline.js"></script>
+</body>
+</html>

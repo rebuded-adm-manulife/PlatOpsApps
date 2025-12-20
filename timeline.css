@@ -1,0 +1,30 @@
+/* Timeline Creator styles */
+:root{--bg:#f6fbff;--card:#fff;--accent:#2563eb;--muted:#5b6b7a;--danger:#ef4444}
+*{box-sizing:border-box}
+body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background:var(--bg); color:#102030; margin:0}
+.site-header{display:flex;gap:1rem;align-items:center;padding:1rem 1.25rem;background:linear-gradient(90deg,#ffffffcc,#f0f6ff);border-bottom:1px solid #e6eef8}
+.site-header h1{font-size:1.125rem;margin:0}
+.container{max-width:980px;margin:20px auto;padding:1rem}
+.timeline-form{display:grid;gap:0.75rem}
+.row label{display:block;font-weight:600;color:var(--accent);margin-bottom:6px}
+.row select,.row input{width:100%;padding:10px;border:1px solid #d2e0f5;border-radius:8px;background:white}
+.two-up{display:flex;gap:12px}
+.timezone-preview{align-self:end;color:var(--muted);font-size:0.9rem}
+.actions{display:flex;gap:8px}
+.btn{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;font-weight:600;cursor:pointer}
+.btn.small{padding:6px 10px;font-size:0.9rem}
+.btn.clear{background:#6b7280}
+.btn.add{background:#10b981}
+.timeline-section{margin-top:18px;background:var(--card);border:1px solid #e6eef8;padding:12px;border-radius:10px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.timeline-list{list-style:none;padding:0;margin:0;max-height:360px;overflow:auto}
+.timeline-item{display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:8px;border:1px solid #f0f5fb;margin-bottom:8px;background:linear-gradient(180deg,#fff,#fbfdff)}
+.timeline-meta{min-width:96px;color:var(--muted);font-size:0.9rem}
+.timeline-text{flex:1;white-space:pre-wrap}
+/* inline editor */
+.edit-input{width:100%;min-height:64px;padding:8px;border:1px solid #d2e0f5;border-radius:6px;font-family:inherit;font-size:0.95rem}
+.edit-actions{display:flex;gap:8px;align-items:flex-start}
+.timeline-actions{display:flex;gap:6px}
+.icon-btn{background:#f3f4f6;border:1px solid #e6eef8;padding:6px;border-radius:6px;cursor:pointer;font-weight:600}
+.helper{color:var(--muted);font-size:0.9rem;margin-top:8px}
+@media (max-width:600px){.two-up{flex-direction:column}.timeline-meta{min-width:72px;font-size:0.85rem}}
