@@ -11,7 +11,11 @@ const modifyStandardFor = document.getElementById('modifyStandardFor')
 const preview = document.getElementById('preview')
 const copyBtn = document.getElementById('copyBtn')
 const downloadBtn = document.getElementById('downloadBtn')
+const generateEmailBtn = document.getElementById('generateEmailBtn')
 const clearFieldsBtn = document.getElementById('clearFieldsBtn')
+const toInput = document.getElementById('toEmails')
+const managerEmailInput = document.getElementById('managerEmail')
+const signatureNameInput = document.getElementById('signatureName')
 
 function getLines(text){return text.split(/\r?\n/).map(l=>l.trim())}
 function nextNonEmpty(lines,i){let j=i+1;while(j<lines.length&&lines[j]==='')j++;return j<lines.length?j:-1}
@@ -127,6 +131,39 @@ downloadBtn.addEventListener('click', ()=>{
   const url=URL.createObjectURL(blob)
   const a=document.createElement('a'); a.href=url; a.download='AVD-Modify.txt'; a.click(); URL.revokeObjectURL(url)
 })
+
+// Generate an .eml file suitable for Outlook (CC, Subject using RITM, body = preview + signature)
+if(generateEmailBtn){
+  generateEmailBtn.addEventListener('click', ()=>{
+    const r = ritm.value.trim()
+    if(!r){ if(!confirm('RITM is empty. Continue with generic subject?')) return }
+
+    const toVal = (toInput && toInput.value) ? toInput.value.trim() : ''
+    const managerVal = (managerEmailInput && managerEmailInput.value) ? managerEmailInput.value.trim() : ''
+    const signer = (signatureNameInput && signatureNameInput.value) ? signatureNameInput.value.trim() : ''
+
+    // base CCs
+    const baseCC = ['ETS_Virtual_Connect@manulife.com','GOCC_VDI_Support_Services@manulife.com']
+    // include manager(s) if provided (comma/semicolon/space separated)
+    if(managerVal){
+      managerVal.split(/[;,\s]+/).forEach(e=>{ if(e && !baseCC.includes(e)) baseCC.push(e) })
+    }
+    const cc = baseCC.join(', ')
+
+    const subject = `${r || 'RITMxxxxxx'} | Upgrade Completed`
+    const body = preview.textContent + (signer ? `\n\n${signer}\nPlatform Operations | GOCC` : `\n\nPlatform Operations | GOCC`)
+
+    // X-Unsent: 1 marks the message as unsent so Outlook opens it as an editable draft
+    const eml = `X-Unsent: 1\r\nSubject: ${subject}\r\nTo: ${toVal}\r\nCC: ${cc}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset="utf-8"\r\nContent-Transfer-Encoding: 7bit\r\n\r\n${body}`
+
+    const blob2 = new Blob([eml], {type:'message/rfc822;charset=utf-8'})
+    const filename = `${(r || 'RITM').replace(/[^\w\-]/g,'')}-Upgrade-Completed.eml`
+    const url2 = URL.createObjectURL(blob2)
+    const a2 = document.createElement('a'); a2.href = url2; a2.download = filename; a2.click(); URL.revokeObjectURL(url2)
+    generateEmailBtn.textContent='✅ Generated'
+    setTimeout(()=>generateEmailBtn.textContent='📧 Generate Email (.eml - editable draft)',1500)
+  })
+}
 
 clearFieldsBtn.addEventListener('click', ()=>{
   ritm.value = requestedFor.value = avdName.value = modifyStandardFor.value = ''

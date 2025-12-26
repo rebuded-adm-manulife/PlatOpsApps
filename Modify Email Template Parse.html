@@ -5,25 +5,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>AVD Modify Request Parser</title>
-<style>
-  body { font-family: Arial, sans-serif; background:#0f172a; color:#e5e7eb; margin:0; }
-  header { text-align:center; padding:20px; }
-  .container { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1100px; margin:auto; padding:20px; }
-  @media(max-width:900px){ .container{ grid-template-columns:1fr; } }
-  .card { background:#111827; border-radius:10px; padding:20px; }
-  textarea,input { width:100%; padding:10px; margin-bottom:10px; background:#0b1324; color:#fff; border:1px solid #243244; border-radius:8px; }
-  textarea:focus,input:focus { border-color:#3b82f6; outline:none; }
-  .actions { display:flex; gap:10px; flex-wrap:wrap; }
-  button { padding:10px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
-  .warn { background:#af9a2e; color:#fff; }
-  .success { background:#1dad66; color:#fff; }
-  .primary { background:#1f5ac6; color:#fff; }
-  .danger { background:#c73a3a; color:#fff; }
-  .preview { background:#0a1323; border:1px dashed #243244; padding:14px; border-radius:8px; white-space:pre-wrap; min-height:150px; }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
+<header class="site-header">
   <h1>AVD Modify Request Parser</h1>
   <p>Paste ServiceNow details → Click Parse → Get formatted message</p>
 </header>
@@ -33,12 +18,18 @@
     <textarea id="raw" placeholder="Paste ServiceNow details here..."></textarea>
     <div class="actions">
       <button class="warn" id="parseBtn">🔍 Parse</button>
+      <button class="primary" id="sampleBtn">🧪 Fill Sample</button>
       <button class="danger" id="clearRawBtn">🧹 Clear Input</button>
     </div>
-    <input id="ritm" placeholder="RITM number">
-    <input id="requestedFor" placeholder="Requested for">
-    <input id="avdName" placeholder="AVD Name">
-    <input id="modifyStandardFor" placeholder="Modify standard for">
+
+    <div class="meta-fields">
+      <input id="ritm" placeholder="RITM number">
+      <input id="changeNumber" placeholder="Change Number (optional)">
+      <input id="requestedFor" placeholder="Requested for">
+      <input id="avdName" placeholder="AVD Name">
+      <input id="modifyStandardFor" placeholder="Modify standard for">
+    </div>
+
     <div class="actions">
       <button class="success" id="copyBtn">📋 Copy</button>
       <button class="primary" id="downloadBtn">⬇️ Download</button>
@@ -51,89 +42,14 @@
 AVD Modify request has been completed.
 
 RITM number:
+Change Number:
 Requested for :
 AVD Name:
 Modify standard for :
     </div>
   </div>
 </div>
-<script>
-function getLines(text){return text.split(/\n/).map(l=>l.trim());}
-function nextNonEmpty(lines,i){let j=i+1;while(j<lines.length&&lines[j]==='')j++;return j<lines.length?j:-1;}
-function isHelper(line){return /^(about|More information|Click to open|Removed Template|\(empty\))|^Show/i.test(line);}
-function extractLabel(text,labels){
-  const lines=getLines(text);
-  for(let i=0;i<lines.length;i++){
-    for(let label of labels){
-      if(new RegExp(`^${label}\\b`,'i').test(lines[i])){
-        const inline=lines[i].match(new RegExp(`^${label}\\s*[:：]\\s*(.+)$`,'i'));
-        if(inline&&inline[1]&&!/^\(ie\./i.test(inline[1]))return inline[1].trim();
-        let j=nextNonEmpty(lines,i);
-        while(j!==-1&&isHelper(lines[j]))j=nextNonEmpty(lines,j);
-        return j!==-1?lines[j]:'';
-      }
-    }
-  }
-  return '';
-}
-function extractRITM(text){
-  let val=extractLabel(text,['RITM number','Number','Requested Item','Request item','RITM']);
-  const m=text.match(/\bRITM[-_\s]*\d{5,}\b/i);
-  return m?m[0].replace(/\s+/g,''):val;
-}
-function extractRequestedFor(text){
-  let val=extractLabel(text,['Requested for','Requested For','Requestor','Requester']);
-  if(val)return val;
-  const m=text.match(/requested\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/i);
-  return m?m[1]:'';
-}
-function extractAVDName(text){
-  let val=extractLabel(text,['VM HOSTNAME','VM Hostname','Hostname','AVD Name','VM Name']);
-  if(val)return val;
-  const m=text.match(/\bAZVDP[JDHS][A-Z0-9]+\b/i);
-  return m?m[0]:'';
-}
-function extractLastSKU(text){
-  const lines=getLines(text);
-  let start=-1;
-  for(let i=0;i<lines.length;i++){if(/^VM Size Change\b/i.test(lines[i])){start=i;break;}}
-  if(start===-1)return '';
-  const skus=[];
-  for(let i=start+1;i<lines.length;i++){
-    if(isHelper(lines[i]))continue;
-    if(/^Change unused|^Additional|^Instructions|^Work notes|^Activities/i.test(lines[i]))break;
-    const m=lines[i].match(/\b([A-Za-z]+\d+[A-Za-z0-9_]*v?\d*)\b/);
-    if(m)skus.push(m[1]);
-  }
-  return skus.length?skus[skus.length-1].toUpperCase():'';
-}
-function buildMsg(r,f,a,m){
-  return `AVD Modify request has been completed.\n\nRITM number: ${r}\nRequested for : ${f}\nAVD Name: ${a}\nModify standard for : ${m}`;
-}
-function updatePreview(){
-  preview.textContent=buildMsg(ritm.value.trim(),requestedFor.value.trim(),avdName.value.trim(),modifyStandardFor.value.trim());
-}
-function parse(){
-  const text=raw.value.trim();
-  ritm.value=extractRITM(text);
-  requestedFor.value=extractRequestedFor(text);
-  avdName.value=extractAVDName(text);
-  modifyStandardFor.value=extractLastSKU(text);
-  updatePreview();
-}
-parseBtn.onclick=parse;
-clearRawBtn.onclick=()=>{raw.value='';};
-copyBtn.onclick=async()=>{
-  await navigator.clipboard.writeText(preview.textContent);
-  copyBtn.textContent='✅ Copied';setTimeout(()=>copyBtn.textContent='📋 Copy',1500);
-};
-downloadBtn.onclick=()=>{
-  const blob=new Blob([preview.textContent],{type:'text/plain'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='AVD-Modify.txt';a.click();URL.revokeObjectURL(url);
-};
-clearFieldsBtn.onclick=()=>{ritm.value=requestedFor.value=avdName.value=modifyStandardFor.value='';updatePreview();};
-[ritm,requestedFor,avdName,modifyStandardFor].forEach(el=>el.oninput=updatePreview);
-</script>
+<script src="scripts.js"></script>
+<script src="modify-email.js"></script>
 </body>
 </html>
