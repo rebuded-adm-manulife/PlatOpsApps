@@ -12,8 +12,327 @@
     <a class="btn" href="index.html">← Back</a>
   </header>
   <main style="padding-top:1rem;">
-    <p class="intro">Placeholder for status tracking dashboards and monitors.</p>
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 style="margin:0">Application Deployment</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="searchApp" placeholder="Search apps..." style="padding:6px;border-radius:6px;border:1px solid var(--card-border)">
+          <button class="btn" id="addAppBtn">Add App</button>
+          <label style="display:flex;gap:6px;align-items:center;margin-left:8px;font-size:0.9rem">
+            <input id="useProxy" type="checkbox"> Use proxy
+          </label>
+          <input id="proxyBase" placeholder="http://localhost:3000/proxy" style="width:240px;padding:6px;border-radius:6px;border:1px solid var(--card-border)" title="Proxy base URL (e.g. http://localhost:3000/proxy)">
+        </div>
+      </div>
+
+      <div id="appsList" aria-live="polite"></div>
+
+      <template id="appRowTpl">
+        <div class="status-row">
+          <div class="status-left">
+            <div class="status-meta">
+              <div><strong class="app-name"></strong><div class="app-platform" style="font-size:0.9rem;color:var(--muted)"></div></div>
+              <div><div class="app-id" style="font-size:0.9rem;color:var(--muted)"></div><div class="app-url" style="font-size:0.9rem;color:var(--muted)"></div></div>
+              <div>
+                <div class="app-status"><span class="badge unknown">Unknown</span></div>
+                <div class="app-result" style="font-size:0.9rem;color:var(--muted)"></div>
+                <div class="app-last" style="font-size:0.9rem;color:var(--muted)"></div>
+                <div class="app-version" style="font-size:0.9rem;color:var(--muted)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="status-actions">
+            <button class="btn small checkBtn">Check now</button>
+            <button class="btn small corsBtn">Test CORS</button>
+            <button class="btn small detailsBtn">Details</button>
+            <button class="btn small editBtn">Edit</button>
+            <button class="btn small deleteBtn">Delete</button>
+          </div>
+        </div>
+        <div class="app-details" style="display:none;padding:8px;margin-top:6px;border-left:3px solid var(--card-border);white-space:pre-wrap;font-family:monospace;font-size:0.9rem;color:var(--muted)"></div>
+      </template>
+
+      <h3 style="margin-top:12px">Add / Edit App</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start">
+        <div>
+          <label>Name</label>
+          <input id="appName">
+        </div>
+        <div>
+          <label>Platform</label>
+          <select id="appPlatform"><option>Google Play</option><option>Apple App Store</option></select>
+        </div>
+        <div>
+          <label>Package / App ID</label>
+          <input id="appId">
+        </div>
+        <div style="grid-column:span 3">
+          <label>Status URL (optional)</label>
+          <input id="appUrl" placeholder="https://status.example.com/app/123">
+          <div class="helper" style="margin-top:6px">Tip: For version extraction use a <strong>CORS-enabled</strong> status endpoint that allows browser requests (Access-Control-Allow-Origin: *).</div>
+        </div>
+        <div style="grid-column:span 3">
+          <label>Notes</label>
+          <textarea id="appNotes" rows="2"></textarea>
+        </div>
+        <div>
+          <label>Version Regex (optional)</label>
+          <input id="appVersionRegex" placeholder="e.g. v?(\d+\.\d+\.\d+)">
+        </div>
+        <div style="grid-column:span 2;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" id="saveAppBtn">Save</button>
+          <button class="btn" id="cancelAppBtn">Cancel</button>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <script>
+  (function(){
+    const STORAGE_KEY = 'status_apps'
+    const list = document.getElementById('appsList')
+    const tpl = document.getElementById('appRowTpl')
+
+    function load(){
+      try{ const s = localStorage.getItem(STORAGE_KEY); return s? JSON.parse(s): [] }catch(e){ return [] }
+    }
+    function saveAll(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)) }
+
+    function render(){
+      const items = load()
+      const q = (document.getElementById('searchApp').value || '').toLowerCase()
+      list.innerHTML = ''
+      items.filter(i => !q || i.name.toLowerCase().includes(q) || (i.appId||'').toLowerCase().includes(q)).forEach(item=>{
+        const node = tpl.content.cloneNode(true)
+        node.querySelector('.app-name').textContent = item.name
+        node.querySelector('.app-platform').textContent = item.platform
+        node.querySelector('.app-id').textContent = item.appId || ''
+        node.querySelector('.app-url').textContent = item.url || ''
+        node.querySelector('.app-last').textContent = item.lastChecked || ''
+        node.querySelector('.app-version').textContent = item.version ? ('Version: '+item.version) : (item.versionRegex ? 'Version: not found' : '')
+        node.querySelector('.app-result').textContent = item.lastResult || ''
+        const badge = node.querySelector('.badge')
+        badge.className = 'badge ' + ( (item.status||'unknown').toLowerCase().split(' ')[0] ); badge.textContent = (item.status||'Unknown')
+
+        const detailsDiv = node.querySelector('.app-details')
+        detailsDiv.textContent = item.lastDetail || ''
+        detailsDiv.style.display = 'none'
+        node.querySelector('.detailsBtn').addEventListener('click', ()=>{ detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none' })
+
+        node.querySelector('.checkBtn').addEventListener('click', ()=>checkNow(item, badge, node))
+        node.querySelector('.corsBtn').addEventListener('click', ()=>testCORS(item, badge, node))
+        node.querySelector('.deleteBtn').addEventListener('click', ()=>{ if(confirm('Delete app?')){ const arr = load().filter(i=>i.id!==item.id); saveAll(arr); render() } })
+        node.querySelector('.editBtn').addEventListener('click', ()=>{ fillForm(item) })
+
+        // Show proxy state helper when useProxy is checked
+        const useProxyEl = document.getElementById('useProxy')
+        const proxyBaseEl = document.getElementById('proxyBase')
+        if(useProxyEl && proxyBaseEl && useProxyEl.checked && proxyBaseEl.value) node.querySelector('.app-result').textContent += ' (via proxy)'
+
+
+        list.appendChild(node)
+      })
+    }
+
+    function fillForm(item){
+      document.getElementById('appName').value = item.name || ''
+      document.getElementById('appPlatform').value = item.platform || 'Google Play'
+      document.getElementById('appId').value = item.appId || ''
+      document.getElementById('appUrl').value = item.url || ''
+      document.getElementById('appNotes').value = item.notes || ''
+      document.getElementById('appVersionRegex').value = item.versionRegex || ''
+      document.getElementById('saveAppBtn').dataset.editId = item.id
+      document.getElementById('saveAppBtn').textContent = 'Update'
+    }
+
+    function clearForm(){
+      document.getElementById('appName').value=''
+      document.getElementById('appPlatform').value='Google Play'
+      document.getElementById('appId').value=''
+      document.getElementById('appUrl').value=''
+      document.getElementById('appNotes').value=''
+      delete document.getElementById('saveAppBtn').dataset.editId
+      document.getElementById('saveAppBtn').textContent = 'Save'
+    }
+
+    async function checkNow(item, badge, node){
+      const start = Date.now()
+      if(!item.url){ const detail = 'No URL provided'; const short = 'No URL'; const arr0 = load().map(i=> i.id===item.id ? Object.assign({}, i, {status: short, lastChecked: new Date().toLocaleString(), lastResult: short, lastDetail: detail}) : i); saveAll(arr0); render(); return }
+      badge.className='badge pending'; badge.textContent='Checking...'
+
+      try{
+        const useProxy = document.getElementById('useProxy') && document.getElementById('useProxy').checked
+        const proxyBase = document.getElementById('proxyBase') && (document.getElementById('proxyBase').value||'').trim()
+
+        // If proxy is enabled, use it first
+        if(useProxy && proxyBase){
+          try{
+            const pStart = Date.now()
+            const pjResp = await fetch(proxyBase + '?url=' + encodeURIComponent(item.url))
+            const pj = await pjResp.json().catch(()=>({ error: 'Invalid proxy response' }))
+            const duration = Date.now() - pStart
+            if(pj.error){ const short = `Proxy Error`; const detail = `Proxy returned error: ${pj.error}`; const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i); saveAll(arr); render(); return }
+            if(!pj.ok){ const short = `Fail ${pj.status} - ${duration}ms`; const detail = `HTTP ${pj.status} ${pj.statusText}\nTime: ${duration} ms`; const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i); saveAll(arr); render(); return }
+
+            const text = pj.body || ''
+            let versionFound = ''
+            if(item.versionRegex && text){ try{ const rx = new RegExp(item.versionRegex,'i'); const m = text.match(rx); if(m) versionFound = m[1]||m[0] }catch(re){ versionFound = 'Bad regex' } }
+            if(versionFound) item.version = versionFound
+
+            const short = `OK (${pj.status}) - ${duration}ms`
+            const snippet = text ? text.slice(0,1000) : ''
+            const detail = `HTTP ${pj.status} ${pj.statusText || ''}\nTime: ${duration} ms\n\nResponse snippet:\n${snippet}`
+            const arr = load().map(i=> i.id===item.id ? Object.assign({}, i, {status: short, lastChecked: new Date().toLocaleString(), lastResult: short, lastDetail: detail, version: item.version||''}) : i)
+            saveAll(arr); render(); return
+          }catch(pe){ const short='Proxy Error'; const detail=`Proxy fetch failed: ${pe && pe.message?pe.message:pe}`; const arr=load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i); saveAll(arr); render(); return }
+        }
+
+        // Fallback: Try a regular CORS fetch first
+        const res = await fetch(item.url, {mode:'cors'})
+        const duration = Date.now() - start
+
+        // Handle opaque responses (no CORS allowed) when status === 0 or type opaque
+        if(res && (res.type === 'opaque' || res.status === 0)){
+          const short = `OK (opaque) - ${duration}ms`
+          const detail = `Opaque response (CORS prevents reading body).\nURL: ${item.url}\nTime: ${duration} ms`;
+          const arr = load().map(i=> i.id===item.id ? Object.assign({}, i, {status: short, lastChecked: new Date().toLocaleString(), lastResult: short, lastDetail: detail}) : i)
+          saveAll(arr); render(); return
+        }
+
+        if(res.ok){
+          // Read body and optionally try to extract version
+          const text = await res.text().catch(()=>null)
+          let versionFound = ''
+          if(item.versionRegex && text){
+            try{
+              const rx = new RegExp(item.versionRegex, 'i')
+              const m = text.match(rx)
+              if(m){ versionFound = m[1] || m[0] }
+            }catch(re){ versionFound = 'Bad regex' }
+          }
+          if(versionFound) item.version = versionFound
+
+          const short = `OK (${res.status}) - ${duration}ms`
+          const snippet = text ? text.slice(0,1000) : ''
+          const detail = `HTTP ${res.status} ${res.statusText}\nTime: ${duration} ms\n\nResponse snippet:\n${snippet}`
+          const arr = load().map(i=> i.id===item.id ? Object.assign({}, i, {status: short, lastChecked: new Date().toLocaleString(), lastResult: short, lastDetail: detail, version: item.version||''}) : i)
+          saveAll(arr); render(); return
+        } else {
+          // Non-OK status (e.g., 404)
+          const short = `Fail ${res.status} - ${duration}ms`
+          const detail = `HTTP ${res.status} ${res.statusText}\nTime: ${duration} ms`
+          const arr = load().map(i=> i.id===item.id ? Object.assign({}, i, {status: short, lastChecked: new Date().toLocaleString(), lastResult: short, lastDetail: detail}) : i)
+          saveAll(arr); render(); return
+        }
+      }catch(e){
+        // Try a no-cors probe — this may succeed but give opaque response
+        try{
+          const probeStart = Date.now();
+          await fetch(item.url, {mode:'no-cors'})
+          const duration = Date.now() - probeStart
+          const short = `OK (no-cors) - ${duration}ms`
+          const detail = `No-CORS probe succeeded. Response body unavailable.\nURL: ${item.url}\nTime: ${duration} ms`;
+          const arr = load().map(i=> i.id===item.id ? Object.assign({}, i, {status: short, lastChecked: new Date().toLocaleString(), lastResult: short, lastDetail: detail}) : i)
+          saveAll(arr); render(); return
+        }catch(inner){
+          const duration = Date.now() - start
+          const msg = (e && e.message) ? e.message : 'Error'
+          const short = `Error`;
+          const detail = `Error: ${msg}\nTime: ${duration} ms`;
+          const arr=load().map(i=> i.id===item.id? Object.assign({}, i, {status: short, lastChecked:new Date().toLocaleString(), lastResult: short, lastDetail: detail}):i)
+          saveAll(arr); render(); return
+        }
+      }
+    }
+
+    // Dedicated CORS test (readability probe)
+    async function testCORS(item, badge, node){
+      if(!item.url){ const detail='No URL provided'; const short='No URL'; const arr0=load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i); saveAll(arr0); render(); return }
+      badge.className='badge pending'; badge.textContent='CORS test...'
+      try{
+        const start = Date.now()
+        const useProxy = document.getElementById('useProxy') && document.getElementById('useProxy').checked
+        const proxyBase = document.getElementById('proxyBase') && (document.getElementById('proxyBase').value||'').trim()
+
+        if(useProxy && proxyBase){
+          // Use proxy to fetch and return readable body
+          try{
+            const pStart = Date.now()
+            const pjResp = await fetch(proxyBase + '?url=' + encodeURIComponent(item.url))
+            const pj = await pjResp.json().catch(()=>({ error: 'Invalid proxy response' }))
+            const duration = Date.now() - pStart
+            if(pj.error){ const short = `Proxy Error`; const detail = `Proxy returned error: ${pj.error}`; const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i); saveAll(arr); render(); return }
+            if(!pj.ok){ const short = `Fail ${pj.status} - ${duration}ms`; const detail = `HTTP ${pj.status} ${pj.statusText}\nTime: ${duration} ms`; const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i); saveAll(arr); render(); return }
+            const snippet = pj.body? pj.body.slice(0,800): ''
+            const short = `CORS OK (via proxy) - ${duration}ms`
+            const detail = `HTTP ${pj.status} ${pj.statusText || ''}\nTime: ${duration} ms\n\nResponse snippet:\n${snippet}`
+            // attempt version extraction
+            let versionFound = ''
+            if(item.versionRegex && pj.body){ try{ const rx = new RegExp(item.versionRegex,'i'); const m = pj.body.match(rx); if(m) versionFound = m[1]||m[0] }catch(re){ versionFound = 'Bad regex' } }
+            const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail, version: versionFound || i.version || ''}):i)
+            saveAll(arr); render(); return
+          }catch(pe){ const short='Proxy Error'; const detail=`Proxy fetch failed: ${pe && pe.message?pe.message:pe}`; const arr=load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i); saveAll(arr); render(); return }
+        }
+
+        // Normal browser CORS test
+        const res = await fetch(item.url, {mode:'cors'})
+        const duration = Date.now()-start
+        if(res && (res.type==='opaque' || res.status===0)){
+          const short = `No CORS (opaque) - ${duration}ms`
+          const detail = `CORS not allowed: response type is opaque.\nURL: ${item.url}\nTime: ${duration} ms`;
+          const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i)
+          saveAll(arr); render(); return
+        }
+        if(res.ok){
+          const text = await res.text().catch(()=>null)
+          const snippet = text? text.slice(0,800): ''
+          const short = `CORS OK - ${duration}ms`
+          const detail = `HTTP ${res.status} ${res.statusText}\nTime: ${duration} ms\n\nResponse snippet:\n${snippet}`
+          const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i)
+          saveAll(arr); render(); return
+        } else {
+          const short = `Fail ${res.status} - ${duration}ms`
+          const detail = `HTTP ${res.status} ${res.statusText}\nTime: ${duration} ms`;
+          const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i)
+          saveAll(arr); render(); return
+        }
+      }catch(e){
+        const msg = e && e.message ? e.message : 'Error'
+        const short = 'CORS Error'
+        const detail = `CORS test error: ${msg}`
+        const arr = load().map(i=> i.id===item.id? Object.assign({}, i, {status:short,lastChecked:new Date().toLocaleString(), lastResult:short, lastDetail:detail}):i)
+        saveAll(arr); render(); return
+      }
+    }
+
+    document.getElementById('addAppBtn').addEventListener('click', ()=>{ clearForm(); document.getElementById('appName').focus() })
+    document.getElementById('cancelAppBtn').addEventListener('click', clearForm)
+
+    document.getElementById('saveAppBtn').addEventListener('click', ()=>{
+      const name = document.getElementById('appName').value.trim(); if(!name){ alert('Name required'); return }
+      const platform = document.getElementById('appPlatform').value
+      const appId = document.getElementById('appId').value.trim()
+      const url = document.getElementById('appUrl').value.trim()
+      const notes = document.getElementById('appNotes').value.trim()
+      const versionRegex = document.getElementById('appVersionRegex').value.trim()
+      const editId = document.getElementById('saveAppBtn').dataset.editId
+      const arr = load()
+      if(editId){ // update
+        const newArr = arr.map(i=> i.id===editId? Object.assign({}, i, {name,platform,appId,url,notes,versionRegex}):i)
+        saveAll(newArr)
+      } else { // create
+        arr.push({ id: String(Date.now()), name, platform, appId, url, notes, versionRegex, status:'Unknown', lastChecked:'', version:'' })
+        saveAll(arr)
+      }
+      clearForm(); render()
+    })
+
+    document.getElementById('searchApp').addEventListener('input', render)
+
+    // initial render
+    render()
+  })()
+  </script>
 
   <script src="scripts.js"></script>
 </body>

@@ -1,0 +1,13 @@
+{
+  "name": "status-proxy",
+  "version": "1.0.0",
+  "description": "Small proxy for status-tracker to bypass CORS for status/version fetches",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7"
+  }
+}

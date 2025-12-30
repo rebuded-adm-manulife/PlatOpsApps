@@ -16,6 +16,11 @@ const clearFieldsBtn = document.getElementById('clearFieldsBtn')
 const toInput = document.getElementById('toEmails')
 const managerEmailInput = document.getElementById('managerEmail')
 const signatureNameInput = document.getElementById('signatureName')
+const signatureEmailInput = document.getElementById('signatureEmail')
+
+let companyIconDataUrl = ''
+let companyIconLoadAttempted = false
+const companyIconCid = 'companyicon@local'
 
 function getLines(text){return text.split(/\r?\n/).map(l=>l.trim())}
 function nextNonEmpty(lines,i){let j=i+1;while(j<lines.length&&lines[j]==='')j++;return j<lines.length?j:-1}
@@ -79,14 +84,128 @@ function extractLastSKU(text){
   return skus.length?skus[skus.length-1].toUpperCase():''
 }
 
+function escapeHtml(str){
+  const map = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }
+  return (str || '').replace(/[&<>"']/g,s=>map[s])
+}
+
+function parseDataUrl(dataUrl){
+  const m = /^data:(.*?);base64,(.*)$/.exec(dataUrl || '')
+  if(!m) return null
+  const mime = m[1] || 'application/octet-stream'
+  const base64 = m[2]
+  let ext = ''
+  if(/png/i.test(mime)) ext = '.png'
+  else if(/jpe?g/i.test(mime)) ext = '.jpg'
+  else if(/gif/i.test(mime)) ext = '.gif'
+  else if(/bmp/i.test(mime)) ext = '.bmp'
+  else if(/svg/i.test(mime)) ext = '.svg'
+  return { mime, base64, ext }
+}
+
+function buildSignaturePlain(name,email){
+  const lines=['Regards,','', name || 'Signature Fullname','Platform Operations | GOCC']
+  if(email) lines.push(`Email ${email}`)
+  return lines.join('\n')
+}
+
+function buildSignatureHtml(name,email,icon){
+  const safeName = escapeHtml(name || 'Signature Fullname')
+  const safeEmail = email ? escapeHtml(email) : ''
+  let iconImg = ''
+  if(icon && icon.mode === 'cid' && icon.cid){
+    iconImg = `<img src="cid:${icon.cid}" alt="Company icon" style="height:48px;width:auto;object-fit:contain;">`
+    console.log('Using CID icon:', icon.cid)
+  }else if(icon && icon.mode === 'data' && icon.dataUrl){
+    iconImg = `<img src="${icon.dataUrl}" alt="Company icon" style="height:48px;width:auto;object-fit:contain;">`
+    console.log('Using data URL icon, length:', icon.dataUrl.length)
+  }else{
+    console.log('No icon available:', icon)
+  }
+  return `<div style="margin-top:12px;">
+    <div style="font-weight:700;">Regards,</div>
+    <div style="font-weight:700;margin-top:6px;">${safeName}</div>
+    <div>Platform Operations | GOCC</div>
+    ${safeEmail ? `<div>Email ${safeEmail}</div>` : ''}
+    ${iconImg ? `<div style="margin-top:8px;">${iconImg}</div>` : ''}
+  </div>`
+}
+
+function buildHtmlBody(mainText,name,email,icon,textColor='#0b1220'){
+  const safeMain = escapeHtml(mainText).replace(/\n/g,'<br>')
+  const mainHtml = `<div>${safeMain}</div>`
+  const signatureHtml = buildSignatureHtml(name,email,icon)
+  return `<div style="font-family:'Segoe UI', Arial, sans-serif;font-size:14px;line-height:1.5;color:${textColor};">${mainHtml}${signatureHtml}</div>`
+}
+
+function buildBodies(options={}){
+  const { iconMode='data', iconDataUrl='', iconCid='', textColor='#0b1220' } = options
+  const c = (typeof changeNumber !== 'undefined' && changeNumber && changeNumber.value) ? changeNumber.value.trim() : ''
+  const name = signatureNameInput && signatureNameInput.value ? signatureNameInput.value.trim() : ''
+  const sigEmail = signatureEmailInput && signatureEmailInput.value ? signatureEmailInput.value.trim() : ''
+  const main = buildMsg(ritm.value.trim(), c, requestedFor.value.trim(), avdName.value.trim(), modifyStandardFor.value.trim())
+  const plainSig = buildSignaturePlain(name, sigEmail)
+  const plainBody = `${main}\n\n${plainSig}`.trim()
+  const icon = iconMode === 'cid' && iconCid ? { mode:'cid', cid: iconCid } : { mode:'data', dataUrl: iconDataUrl || companyIconDataUrl }
+  console.log('buildBodies icon:', icon.mode, icon.dataUrl ? 'dataUrl length: ' + icon.dataUrl.length : '', icon.cid || '')
+  const htmlBody = buildHtmlBody(main, name, sigEmail, icon, textColor)
+  return { plainBody, htmlBody }
+}
+
+async function loadCompanyIcon(){
+  if(companyIconLoadAttempted) return companyIconDataUrl
+  companyIconLoadAttempted = true
+  try{
+    const res = await fetch('company_icon.png')
+    if(!res.ok) throw new Error(`HTTP ${res.status}`)
+    const blob = await res.blob()
+    companyIconDataUrl = await new Promise((resolve,reject)=>{
+      const reader = new FileReader()
+      reader.onloadend = ()=>resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+    console.log('Company icon loaded via fetch, length:', companyIconDataUrl.length)
+  }catch(err){
+    console.warn('Unable to load company_icon.png via fetch, trying image fallback', err)
+    companyIconDataUrl = await loadCompanyIconViaImageFallback()
+    console.log('Company icon loaded via fallback, length:', companyIconDataUrl.length)
+  }
+  return companyIconDataUrl
+}
+
+function loadCompanyIconViaImageFallback(){
+  return new Promise(resolve=>{
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = ()=>{
+      try{
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img,0,0)
+        const dataUrl = canvas.toDataURL('image/png')
+        resolve(dataUrl)
+      }catch(e){
+        console.warn('Image fallback failed', e)
+        resolve('')
+      }
+    }
+    img.onerror = ()=>resolve('')
+    img.src = 'company_icon.png'
+  })
+}
+
 function buildMsg(r,c,f,a,m){
   const changeLine = c ? `Change Number: ${c}\n` : ''
   return `AVD Modify request has been completed.\n\nRITM number: ${r || 'N/A'}\n${changeLine}Requested for : ${f || ''}\nAVD Name: ${a || ''}\nModify standard for : ${m || ''}`
 }
 
 function updatePreview(){
-  const c = (typeof changeNumber !== 'undefined' && changeNumber && changeNumber.value) ? changeNumber.value.trim() : ''
-  preview.textContent = buildMsg(ritm.value.trim(), c, requestedFor.value.trim(), avdName.value.trim(), modifyStandardFor.value.trim())
+  if(!preview) return
+  const { htmlBody } = buildBodies({ iconMode:'data', iconDataUrl: companyIconDataUrl, textColor: '#e6eef8' })
+  preview.innerHTML = htmlBody
 } 
 
 function parse(){
@@ -114,34 +233,34 @@ raw.addEventListener('paste', (e)=>{
 
 // copy/download helpers with feedback
 copyBtn.addEventListener('click', async ()=>{
+  const { plainBody } = buildBodies()
   try{
-    await navigator.clipboard.writeText(preview.textContent)
+    await navigator.clipboard.writeText(plainBody)
     copyBtn.textContent='✅ Copied'
     setTimeout(()=>copyBtn.textContent='📋 Copy',1500)
   }catch(e){
     // fallback
-    const ta=document.createElement('textarea'); ta.value = preview.textContent; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select();
+    const ta=document.createElement('textarea'); ta.value = plainBody; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select();
     try{ document.execCommand('copy'); copyBtn.textContent='✅ Copied' } catch(e){ alert('Copy failed') }
     finally{ document.body.removeChild(ta); setTimeout(()=>copyBtn.textContent='📋 Copy',1500) }
   }
 })
 
 downloadBtn.addEventListener('click', ()=>{
-  const blob=new Blob([preview.textContent],{type:'text/plain'})
+  const { plainBody } = buildBodies()
+  const blob=new Blob([plainBody],{type:'text/plain'})
   const url=URL.createObjectURL(blob)
   const a=document.createElement('a'); a.href=url; a.download='AVD-Modify.txt'; a.click(); URL.revokeObjectURL(url)
 })
 
 // Generate an .eml file suitable for Outlook (CC, Subject using RITM, body = preview + signature)
 if(generateEmailBtn){
-  generateEmailBtn.addEventListener('click', ()=>{
+  generateEmailBtn.addEventListener('click', async ()=>{
     const r = ritm.value.trim()
     if(!r){ if(!confirm('RITM is empty. Continue with generic subject?')) return }
 
     const toVal = (toInput && toInput.value) ? toInput.value.trim() : ''
     const managerVal = (managerEmailInput && managerEmailInput.value) ? managerEmailInput.value.trim() : ''
-    const signer = (signatureNameInput && signatureNameInput.value) ? signatureNameInput.value.trim() : ''
-
     // base CCs
     const baseCC = ['ETS_Virtual_Connect@manulife.com','GOCC_VDI_Support_Services@manulife.com']
     // include manager(s) if provided (comma/semicolon/space separated)
@@ -151,10 +270,52 @@ if(generateEmailBtn){
     const cc = baseCC.join(', ')
 
     const subject = `${r || 'RITMxxxxxx'} | Upgrade Completed`
-    const body = preview.textContent + (signer ? `\n\n${signer}\nPlatform Operations | GOCC` : `\n\nPlatform Operations | GOCC`)
 
-    // X-Unsent: 1 marks the message as unsent so Outlook opens it as an editable draft
-    const eml = `X-Unsent: 1\r\nSubject: ${subject}\r\nTo: ${toVal}\r\nCC: ${cc}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset="utf-8"\r\nContent-Transfer-Encoding: 7bit\r\n\r\n${body}`
+    const iconUrl = await loadCompanyIcon()
+    const iconInfo = parseDataUrl(iconUrl)
+    const useCid = !!iconInfo
+    const { htmlBody } = buildBodies({ iconMode: useCid ? 'cid' : 'data', iconCid: companyIconCid, iconDataUrl: iconUrl })
+
+    let eml = ''
+    if(useCid){
+      const boundary = '=_avd_' + Date.now()
+      const base64Body = iconInfo.base64.match(/.{1,76}/g)?.join('\r\n') || iconInfo.base64
+      const filename = `company_icon${iconInfo.ext || '.png'}`
+      eml = [
+        'X-Unsent: 1',
+        `Subject: ${subject}`,
+        `To: ${toVal}`,
+        `CC: ${cc}`,
+        'MIME-Version: 1.0',
+        `Content-Type: multipart/related; boundary="${boundary}"`,
+        '',
+        `--${boundary}`,
+        'Content-Type: text/html; charset="utf-8"',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        htmlBody,
+        `--${boundary}`,
+        `Content-Type: ${iconInfo.mime}; name="${filename}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-ID: <${companyIconCid}>`,
+        `Content-Disposition: inline; filename="${filename}"`,
+        '',
+        base64Body,
+        `--${boundary}--`
+      ].join('\r\n')
+    }else{
+      eml = [
+        'X-Unsent: 1',
+        `Subject: ${subject}`,
+        `To: ${toVal}`,
+        `CC: ${cc}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/html; charset="utf-8"',
+        'Content-Transfer-Encoding: 8bit',
+        '',
+        htmlBody
+      ].join('\r\n')
+    }
 
     const blob2 = new Blob([eml], {type:'message/rfc822;charset=utf-8'})
     const filename = `${(r || 'RITM').replace(/[^\w\-]/g,'')}-Upgrade-Completed.eml`
@@ -174,7 +335,21 @@ clearFieldsBtn.addEventListener('click', ()=>{
 // attach input listeners to existing fields
 const watchFields = [ritm, requestedFor, avdName, modifyStandardFor]
 if(typeof changeNumber !== 'undefined' && changeNumber) watchFields.push(changeNumber)
+if(signatureNameInput) watchFields.push(signatureNameInput)
+if(signatureEmailInput) watchFields.push(signatureEmailInput)
 watchFields.forEach(el => el.addEventListener('input', updatePreview))
+if(signatureEmailInput && signatureEmailInput.tagName === 'SELECT'){
+  signatureEmailInput.addEventListener('change', updatePreview)
+}
 
 // init preview
-updatePreview()
+setTimeout(()=>{
+  updatePreview()
+  loadCompanyIcon().then(()=>{
+    updatePreview()
+    console.log('Preview initialized with icon')
+  })
+}, 100)
+
+// listen for signature email changes from scripts.js
+window.addEventListener('signatureEmailChanged', updatePreview)

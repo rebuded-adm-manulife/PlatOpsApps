@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Signature</title>
+</head>
+<body>
+  <h1>Test Signature Email Management</h1>
+  
+  <div>
+    <h2>Add Signature Email</h2>
+    <input type="text" id="testEmailInput" placeholder="Enter email">
+    <button id="testAddBtn">Add</button>
+    <button id="testDeleteBtn">Delete Selected</button>
+  </div>
+
+  <div>
+    <h2>Signature Emails</h2>
+    <select id="testEmailSelect">
+      <option value="">Select email...</option>
+    </select>
+  </div>
+
+  <div>
+    <h2>Test Icon Load</h2>
+    <img id="testIcon" style="max-width:200px;border:1px solid #ccc;">
+    <p id="iconStatus">Loading...</p>
+  </div>
+
+  <script>
+    const emailInput = document.getElementById('testEmailInput')
+    const addBtn = document.getElementById('testAddBtn')
+    const deleteBtn = document.getElementById('testDeleteBtn')
+    const emailSelect = document.getElementById('testEmailSelect')
+    const testIcon = document.getElementById('testIcon')
+    const iconStatus = document.getElementById('iconStatus')
+
+    const loadEmailList = ()=>{
+      try{ const raw = localStorage.getItem('signatureEmailList'); return raw ? JSON.parse(raw) : [] }catch{ return [] }
+    }
+    const saveEmailList = (list)=>localStorage.setItem('signatureEmailList', JSON.stringify(list))
+    
+    const populateEmailOptions = ()=>{
+      const list = loadEmailList()
+      emailSelect.innerHTML = '<option value="">Select email...</option>'
+      list.forEach(email=>{
+        const opt = document.createElement('option')
+        opt.value = email
+        opt.textContent = email
+        emailSelect.appendChild(opt)
+      })
+    }
+
+    addBtn.addEventListener('click', ()=>{
+      const val = emailInput.value.trim()
+      if(!val) return
+      const list = loadEmailList()
+      if(!list.includes(val)) list.push(val)
+      saveEmailList(list)
+      populateEmailOptions()
+      emailInput.value = ''
+      console.log('Added:', val, 'List:', list)
+    })
+
+    deleteBtn.addEventListener('click', ()=>{
+      const current = emailSelect.value
+      if(!current) return
+      const list = loadEmailList().filter(e=>e!==current)
+      saveEmailList(list)
+      populateEmailOptions()
+      console.log('Deleted:', current, 'List:', list)
+    })
+
+    populateEmailOptions()
+
+    // Test icon loading
+    async function testIconLoad(){
+      try{
+        const res = await fetch('company_icon.png')
+        if(!res.ok) throw new Error(`HTTP ${res.status}`)
+        const blob = await res.blob()
+        const dataUrl = await new Promise((resolve,reject)=>{
+          const reader = new FileReader()
+          reader.onloadend = ()=>resolve(reader.result)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+        testIcon.src = dataUrl
+        iconStatus.textContent = `Icon loaded successfully! Length: ${dataUrl.length}`
+        console.log('Icon data URL length:', dataUrl.length)
+      }catch(err){
+        iconStatus.textContent = 'Icon load failed (trying fallback): ' + err.message
+        console.error('Icon fetch error:', err)
+        // Try image fallback
+        const img = new Image()
+        img.onload = ()=>{
+          const canvas = document.createElement('canvas')
+          canvas.width = img.naturalWidth
+          canvas.height = img.naturalHeight
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img,0,0)
+          const dataUrl = canvas.toDataURL('image/png')
+          testIcon.src = dataUrl
+          iconStatus.textContent = `Icon loaded via fallback! Length: ${dataUrl.length}`
+          console.log('Icon fallback data URL length:', dataUrl.length)
+        }
+        img.onerror = ()=>{
+          iconStatus.textContent = 'Icon fallback also failed'
+          console.error('Image fallback failed')
+        }
+        img.src = 'company_icon.png'
+      }
+    }
+    testIconLoad()
+  </script>
+</body>
+</html>

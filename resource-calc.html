@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Resource Calculator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>Resource Calculator</h1>
+    <p class="sample-note">Estimate total CPU and memory requests/limits for an application + sidecar across pods.</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <a class="btn" href="index.html">← Back</a>
+        <h2 style="margin:0">Resource Calculator</h2>
+        <div></div>
+      </div>
+
+      <style>
+        .calc-table{border-collapse:collapse;width:100%}
+        .calc-table th{border:2px solid #0ea5e9;padding:6px;background:transparent}
+        .calc-table td{border:1px solid #3b82f6;padding:6px;text-align:center}
+        .calc-table input{width:80px;padding:4px;font-size:0.95rem}
+        .calc-actions{display:flex;gap:8px;margin-top:10px}
+      </style>
+
+      <table class="calc-table">
+        <tbody>
+          <tr>
+            <td colspan="4" style="text-align:center">Application-Container</td>
+            <td colspan="4" style="text-align:center">Istio-Proxy-Container</td>
+            <td rowspan="3" style="text-align:center;vertical-align:middle">Max Pod Count</td>
+            <td colspan="4" style="text-align:center">Quota</td>
+          </tr>
+          <tr>
+            <td colspan="2" style="text-align:center">Requests</td>
+            <td colspan="2" style="text-align:center">Limits</td>
+            <td colspan="2" style="text-align:center">Requests</td>
+            <td colspan="2" style="text-align:center">Limits</td>
+            <td colspan="2" style="text-align:center">Requests</td>
+            <td colspan="2" style="text-align:center">Limits</td>
+          </tr>
+          <tr>
+            <td>cpu</td>
+            <td>memory (Gi)</td>
+            <td>cpu</td>
+            <td>memory (Gi)</td>
+            <td>cpu</td>
+            <td>memory (Gi)</td>
+            <td>cpu</td>
+            <td>memory (Gi)</td>
+            <td>cpu</td>
+            <td>memory (Gi)</td>
+            <td>cpu</td>
+            <td>memory (Gi)</td>
+          </tr>
+          <tr>
+            <td><input id="app_req_cpu" type="number" step="0.01" value="0.5"></td>
+            <td><input id="app_req_mem" type="number" step="0.01" value="1"></td>
+            <td><input id="app_lim_cpu" type="number" step="0.01" value="1.5"></td>
+            <td><input id="app_lim_mem" type="number" step="0.01" value="2"></td>
+              <td><input id="istio_req_cpu" type="number" step="0.01" value="0.1" disabled="disabled"></td>
+            <td><input id="istio_req_mem" type="number" step="0.01" value="0.2" disabled="disabled"></td>
+            <td><input id="istio_lim_cpu" type="number" step="0.01" value="2" disabled="disabled"></td>
+            <td><input id="istio_lim_mem" type="number" step="0.01" value="1" disabled="disabled"></td>
+            <td><input id="pod_count" name="pod_count" type="number" pattern="[0-9]" style="width: 80px;" value="30"></td>
+            <td><input id="tot_req_cpu" disabled="disabled" name="tot_req_cpu" type="number" step="0.01" style="width: 80px;"></td>
+            <td><input id="tot_req_mem" disabled="disabled" name="tot_req_mem" type="number" step="0.01" style="width: 80px;"></td>
+            <td><input id="tot_lim_cpu" disabled="disabled" name="tot_lim_cpu" type="number" step="0.01" style="width: 80px;"></td>
+            <td><input id="tot_lim_mem" disabled="disabled" name="tot_lim_mem" type="number" step="0.01" style="width: 80px;"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="calc-actions">
+        <button class="btn" id="copyBtn">Copy totals</button>
+      </div> 
+
+      <p class="sample-note" style="margin-top:10px">Tip: Use <strong>Save Defaults</strong> to keep your typical values for next time.</p>
+    </section>
+  </main>
+
+  <script>
+    // Keep behavior identical to original script: round totals to nearest integer using Math.round
+    const $ = id => document.getElementById(id)
+
+    function loadDefaults(){
+      try{
+        const s = localStorage.getItem('resource_calc_defaults')
+        if(!s) return
+        const o = JSON.parse(s)
+        Object.keys(o).forEach(k=>{ if($(k)){ if($(k).type === 'checkbox') $(k).checked = o[k]; else $(k).value = o[k] } })
+      }catch(e){ console.warn('Load defaults failed',e) }
+    }
+
+    // Removed CSV / Save / Reset features per request — only Copy totals remains
+    function copyTotals(){
+      const rows = [
+        ['metric','cluster cpu','cluster mem (Gi)'],
+        ['requests',$('tot_req_cpu').value,$('tot_req_mem').value],
+        ['limits',$('tot_lim_cpu').value,$('tot_lim_mem').value]
+      ]
+      const text = rows.map(r=>r.join(',')).join('\n')
+      navigator.clipboard.writeText(text).then(()=>alert('Totals copied to clipboard'))
+    }
+
+    function calculate(){
+      const pod_count = Number($('pod_count').value) || 0
+
+      const istio_req_cpu = Number($('istio_req_cpu').value) || 0
+      const istio_req_mem = Number($('istio_req_mem').value) || 0
+      const istio_lim_cpu = Number($('istio_lim_cpu').value) || 0
+      const istio_lim_mem = Number($('istio_lim_mem').value) || 0
+
+      const app_req_cpu = Number($('app_req_cpu').value) || 0
+      const app_req_mem = Number($('app_req_mem').value) || 0
+      const app_lim_cpu = Number($('app_lim_cpu').value) || 0
+      const app_lim_mem = Number($('app_lim_mem').value) || 0
+
+      const tot_req_cpu = Math.round((app_req_cpu + istio_req_cpu) * pod_count)
+      const tot_req_mem = Math.round((app_req_mem + istio_req_mem) * pod_count)
+      const tot_lim_cpu = Math.round((app_lim_cpu + istio_lim_cpu) * pod_count)
+      const tot_lim_mem = Math.round((app_lim_mem + istio_lim_mem) * pod_count)
+
+      $('tot_req_cpu').value = tot_req_cpu
+      $('tot_req_mem').value = tot_req_mem
+      $('tot_lim_cpu').value = tot_lim_cpu
+      $('tot_lim_mem').value = tot_lim_mem
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      loadDefaults(); calculate();
+      $('copyBtn').addEventListener('click', copyTotals)
+
+      // Match original behaviour: calculate on blur for app fields, and on input/change for pod_count
+      const appFields = ['app_req_cpu','app_req_mem','app_lim_cpu','app_lim_mem']
+      appFields.forEach(id=>{ const el=$(id); if(el) el.addEventListener('blur', calculate) })
+
+      const pod = $('pod_count')
+      if(pod){ pod.addEventListener('input', calculate); pod.addEventListener('change', calculate) }
+    })
+  </script>
+
+      <p class="sample-note" style="margin-top:10px">Tip: Use <strong>Copy totals</strong> to copy quota values to clipboard.</p>
+  </script>
+</body>
+</html>

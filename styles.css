@@ -54,12 +54,33 @@ button:hover,.btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(2,
 
 /* Preview */
 .preview{background:var(--preview-bg);border:1px dashed var(--preview-border);padding:16px;border-radius:10px;white-space:pre-wrap;min-height:180px;color:var(--text)}
+.rich-preview{white-space:normal;line-height:1.5}
 
 /* Utilities */
 .meta-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:8px}
+.signature-email-row{display:grid;grid-template-columns:2fr 1.5fr auto auto;gap:8px;grid-column:1 / -1}
 .helper{color:var(--muted);font-size:0.95rem}
 .small{padding:8px 12px;font-size:0.95rem}
 .sample-note{font-size:0.9rem;color:var(--muted);margin-top:6px}
+
+/* Signature saved indicator */
+.saved-indicator{opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease;color:#10b981;font-weight:700;font-size:0.95rem;margin-left:6px}
+.saved-indicator.visible{opacity:1;transform:translateY(0)}
+
+
+#toolsLog{min-height:56px;background:transparent;border:1px dashed var(--card-border);padding:8px;border-radius:6px}
+
+/* Status badges */
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-weight:700;font-size:0.85rem}
+.badge.ok{background:#10b981;color:white}
+.badge.pending{background:#f59e0b;color:white}
+.badge.failed{background:#ef4444;color:white}
+.badge.unknown{background:#6b7280;color:white}
+
+.status-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px;border:1px solid var(--card-border);border-radius:8px;background:var(--card);margin-bottom:8px}
+.status-left{display:flex;gap:12px;align-items:center}
+.status-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;min-width:420px}
+.status-actions{display:flex;gap:8px;align-items:center}
 
 
 

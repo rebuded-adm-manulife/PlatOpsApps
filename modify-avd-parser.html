@@ -29,7 +29,18 @@
         <input id="modifyStandardFor" placeholder="Modify standard for">
         <input id="toEmails" placeholder="To (comma-separated) - optional">
         <input id="managerEmail" placeholder="Manager Email (added to CC) - optional">
-        <input id="signatureName" placeholder="Your full name">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="signatureName" placeholder="Signature full name (for footer)">
+          <span id="signatureSavedIndicator" class="saved-indicator" aria-hidden="true">✓ Saved</span>
+        </div>
+        <div class="signature-email-row">
+          <select id="signatureEmail" aria-label="Saved signature emails">
+            <option value="">Select signature email…</option>
+          </select>
+          <input id="newSignatureEmail" placeholder="Add email">
+          <button type="button" class="primary small" id="addSignatureEmailBtn">＋</button>
+          <button type="button" class="danger small" id="deleteSignatureEmailBtn">🗑</button>
+        </div>
       </div>
 
       <div class="actions">
@@ -37,13 +48,13 @@
         <button class="primary" id="downloadBtn">⬇️ Download</button>
         <button class="primary" id="generateEmailBtn">📧 Generate Email (.eml - editable draft)</button>
         <button class="danger" id="clearFieldsBtn">🧼 Clear Fields</button>
+        <button class="btn small" id="clearSavedBtn">🗑️ Clear Saved Settings</button>
       </div>
-      <p class="helper">Downloaded .eml will open as an editable draft in Outlook (Subject and Body are editable).</p> 
     </div>
 
     <div class="card">
       <h2>Preview</h2>
-      <div id="preview" class="preview">AVD Modify request has been completed.
+      <div id="preview" class="preview rich-preview">AVD Modify request has been completed.
 
 RITM number:
 Requested for :
