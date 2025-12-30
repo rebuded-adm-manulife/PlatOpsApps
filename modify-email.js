@@ -1,6 +1,7 @@
 /* modify-email.js - improved parser and UI behavior */
 const raw = document.getElementById('raw')
 const parseBtn = document.getElementById('parseBtn')
+const addToListBtn = document.getElementById('addToListBtn')
 const clearRawBtn = document.getElementById('clearRawBtn')
 const sampleBtn = document.getElementById('sampleBtn')
 const ritm = document.getElementById('ritm')
@@ -13,14 +14,20 @@ const copyBtn = document.getElementById('copyBtn')
 const downloadBtn = document.getElementById('downloadBtn')
 const generateEmailBtn = document.getElementById('generateEmailBtn')
 const clearFieldsBtn = document.getElementById('clearFieldsBtn')
+const clearEntriesBtn = document.getElementById('clearEntriesBtn')
 const toInput = document.getElementById('toEmails')
 const managerEmailInput = document.getElementById('managerEmail')
 const signatureNameInput = document.getElementById('signatureName')
 const signatureEmailInput = document.getElementById('signatureEmail')
+const entryListContainer = document.getElementById('entryList')
+const entriesContainer = document.getElementById('entries')
+const entryCount = document.getElementById('entryCount')
 
 let companyIconDataUrl = ''
 let companyIconLoadAttempted = false
 const companyIconCid = 'companyicon@local'
+
+let entries = []
 
 function getLines(text){return text.split(/\r?\n/).map(l=>l.trim())}
 function nextNonEmpty(lines,i){let j=i+1;while(j<lines.length&&lines[j]==='')j++;return j<lines.length?j:-1}
@@ -140,10 +147,9 @@ function buildHtmlBody(mainText,name,email,icon,textColor='#0b1220'){
 
 function buildBodies(options={}){
   const { iconMode='data', iconDataUrl='', iconCid='', textColor='#0b1220' } = options
-  const c = (typeof changeNumber !== 'undefined' && changeNumber && changeNumber.value) ? changeNumber.value.trim() : ''
   const name = signatureNameInput && signatureNameInput.value ? signatureNameInput.value.trim() : ''
   const sigEmail = signatureEmailInput && signatureEmailInput.value ? signatureEmailInput.value.trim() : ''
-  const main = buildMsg(ritm.value.trim(), c, requestedFor.value.trim(), avdName.value.trim(), modifyStandardFor.value.trim())
+  const main = entries.length > 0 ? buildMultiEntryMsg() : buildMsg(ritm.value.trim(), '', requestedFor.value.trim(), avdName.value.trim(), modifyStandardFor.value.trim())
   const plainSig = buildSignaturePlain(name, sigEmail)
   const plainBody = `${main}\n\n${plainSig}`.trim()
   const icon = iconMode === 'cid' && iconCid ? { mode:'cid', cid: iconCid } : { mode:'data', dataUrl: iconDataUrl || companyIconDataUrl }
@@ -202,6 +208,76 @@ function buildMsg(r,c,f,a,m){
   return `AVD Modify request has been completed.\n\nRITM number: ${r || 'N/A'}\n${changeLine}Requested for : ${f || ''}\nAVD Name: ${a || ''}\nModify standard for : ${m || ''}`
 }
 
+function buildMultiEntryMsg(){
+  if(entries.length === 0){
+    return buildMsg('','','','','')
+  }
+  const header = entries.length > 1 ? `AVD Modify requests have been completed.\n\n` : `AVD Modify request has been completed.\n\n`
+  const entryTexts = entries.map((e,i)=>{
+    const num = entries.length > 1 ? `${i+1}. ` : ''
+    return `${num}RITM number: ${e.ritm || 'N/A'}\nRequested for : ${e.requestedFor || ''}\nAVD Name: ${e.avdName || ''}\nModify standard for : ${e.modifyStandardFor || ''}`
+  })
+  return header + entryTexts.join('\n\n')
+}
+
+function addEntry(){
+  const entry = {
+    ritm: ritm.value.trim(),
+    requestedFor: requestedFor.value.trim(),
+    avdName: avdName.value.trim(),
+    modifyStandardFor: modifyStandardFor.value.trim()
+  }
+  if(!entry.ritm && !entry.requestedFor && !entry.avdName && !entry.modifyStandardFor){
+    alert('Please fill in at least one field before adding to list')
+    return
+  }
+  entries.push(entry)
+  updateEntryList()
+  clearFields()
+  updatePreview()
+}
+
+function removeEntry(index){
+  entries.splice(index,1)
+  updateEntryList()
+  updatePreview()
+}
+
+function clearAllEntries(){
+  entries = []
+  updateEntryList()
+  updatePreview()
+}
+
+function updateEntryList(){
+  if(entries.length === 0){
+    entryListContainer.style.display = 'none'
+    return
+  }
+  entryListContainer.style.display = 'block'
+  entryCount.textContent = entries.length
+  entriesContainer.innerHTML = entries.map((e,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;padding:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;margin-bottom:6px;">
+      <div style="flex:1;font-size:0.9rem;">
+        <strong>${e.ritm || 'N/A'}</strong> | ${e.requestedFor || 'N/A'} | ${e.avdName || 'N/A'} | ${e.modifyStandardFor || 'N/A'}
+      </div>
+      <button class="danger small entry-remove-btn" data-index="${i}" style="padding:4px 8px;font-size:0.85rem;">🗑</button>
+    </div>
+  `).join('')
+}
+
+// Event delegation for remove buttons
+if(entriesContainer){
+  entriesContainer.addEventListener('click', (e)=>{
+    if(e.target.classList.contains('entry-remove-btn')){
+      const index = parseInt(e.target.dataset.index)
+      if(!isNaN(index)){
+        removeEntry(index)
+      }
+    }
+  })
+}
+
 function updatePreview(){
   if(!preview) return
   const { htmlBody } = buildBodies({ iconMode:'data', iconDataUrl: companyIconDataUrl, textColor: '#e6eef8' })
@@ -220,10 +296,27 @@ function parse(){
 
 // UI handlers
 parseBtn.addEventListener('click', parse)
+if(addToListBtn) addToListBtn.addEventListener('click', addEntry)
 clearRawBtn.addEventListener('click', ()=>{ raw.value=''; })
 sampleBtn.addEventListener('click', ()=>{
   raw.value = `Request item: RITM-123456\nRequested for: John Doe\nVM Hostname: host01.corp\nVM Size Change\n  StandardA1  \n  StandardB2\nAdditional notes...`;
   parse()
+})
+
+function clearFields(){
+  ritm.value = requestedFor.value = avdName.value = modifyStandardFor.value = ''
+  if(typeof changeNumber !== 'undefined' && changeNumber) changeNumber.value = ''
+}
+
+clearFieldsBtn.addEventListener('click', ()=>{
+  clearFields()
+  updatePreview()
+})
+
+if(clearEntriesBtn) clearEntriesBtn.addEventListener('click', ()=>{
+  if(confirm('Clear all entries from the list?')){
+    clearAllEntries()
+  }
 })
 
 // auto-parse on paste
@@ -256,8 +349,17 @@ downloadBtn.addEventListener('click', ()=>{
 // Generate an .eml file suitable for Outlook (CC, Subject using RITM, body = preview + signature)
 if(generateEmailBtn){
   generateEmailBtn.addEventListener('click', async ()=>{
-    const r = ritm.value.trim()
-    if(!r){ if(!confirm('RITM is empty. Continue with generic subject?')) return }
+    let r = ritm.value.trim()
+    
+    // Build subject with all RITM numbers
+    let subject = ''
+    if(entries.length > 0){
+      const ritmNumbers = entries.map(e=>e.ritm || 'RITMxxxxxx').join(',')
+      subject = `${ritmNumbers} | Upgrade Completed`
+    }else{
+      if(!r){ if(!confirm('RITM is empty. Continue with generic subject?')) return }
+      subject = `${r || 'RITMxxxxxx'} | Upgrade Completed`
+    }
 
     const toVal = (toInput && toInput.value) ? toInput.value.trim() : ''
     const managerVal = (managerEmailInput && managerEmailInput.value) ? managerEmailInput.value.trim() : ''
@@ -268,8 +370,6 @@ if(generateEmailBtn){
       managerVal.split(/[;,\s]+/).forEach(e=>{ if(e && !baseCC.includes(e)) baseCC.push(e) })
     }
     const cc = baseCC.join(', ')
-
-    const subject = `${r || 'RITMxxxxxx'} | Upgrade Completed`
 
     const iconUrl = await loadCompanyIcon()
     const iconInfo = parseDataUrl(iconUrl)
@@ -326,13 +426,7 @@ if(generateEmailBtn){
   })
 }
 
-clearFieldsBtn.addEventListener('click', ()=>{
-  ritm.value = requestedFor.value = avdName.value = modifyStandardFor.value = ''
-  if(typeof changeNumber !== 'undefined' && changeNumber) changeNumber.value = ''
-  updatePreview()
-})
-
-// attach input listeners to existing fields
+// copy/download helpers with feedback
 const watchFields = [ritm, requestedFor, avdName, modifyStandardFor]
 if(typeof changeNumber !== 'undefined' && changeNumber) watchFields.push(changeNumber)
 if(signatureNameInput) watchFields.push(signatureNameInput)

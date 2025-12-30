@@ -18,8 +18,14 @@
       <textarea id="raw" placeholder="Paste ServiceNow details here..."></textarea>
       <div class="actions">
         <button class="warn" id="parseBtn">🔍 Parse</button>
+        <button class="success" id="addToListBtn">➕ Add to List</button>
         <button class="primary" id="sampleBtn">🧪 Fill Sample</button>
         <button class="danger" id="clearRawBtn">🧹 Clear Input</button>
+      </div>
+
+      <div id="entryList" style="display:none;margin:12px 0;padding:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:8px;">
+        <h3 style="margin:0 0 8px 0;font-size:0.95rem;color:var(--muted);">Entries to Include (<span id="entryCount">0</span>)</h3>
+        <div id="entries"></div>
       </div>
 
       <div class="meta-fields">
@@ -48,6 +54,7 @@
         <button class="primary" id="downloadBtn">⬇️ Download</button>
         <button class="primary" id="generateEmailBtn">📧 Generate Email (.eml - editable draft)</button>
         <button class="danger" id="clearFieldsBtn">🧼 Clear Fields</button>
+        <button class="danger" id="clearEntriesBtn">🗑 Clear All Entries</button>
         <button class="btn small" id="clearSavedBtn">🗑️ Clear Saved Settings</button>
       </div>
     </div>
