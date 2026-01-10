@@ -35,8 +35,13 @@
         <input id="modifyStandardFor" placeholder="Modify standard for">
         <input id="toEmails" placeholder="To (comma-separated) - optional">
         <input id="managerEmail" placeholder="Manager Email (added to CC) - optional">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="signatureName" placeholder="Signature full name (for footer)">
+        <div class="signature-email-row">
+          <select id="signatureName" aria-label="Saved signature names">
+            <option value="">Select signature name…</option>
+          </select>
+          <input id="newSignatureName" placeholder="Add name">
+          <button type="button" class="primary small" id="addSignatureNameBtn">＋</button>
+          <button type="button" class="danger small" id="deleteSignatureNameBtn">🗑</button>
           <span id="signatureSavedIndicator" class="saved-indicator" aria-hidden="true">✓ Saved</span>
         </div>
         <div class="signature-email-row">

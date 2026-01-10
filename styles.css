@@ -58,7 +58,7 @@ button:hover,.btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(2,
 
 /* Utilities */
 .meta-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:8px}
-.signature-email-row{display:grid;grid-template-columns:2fr 1.5fr auto auto;gap:8px;grid-column:1 / -1}
+.signature-email-row{display:grid;grid-template-columns:2fr 1.5fr auto auto auto;gap:8px;grid-column:1 / -1;align-items:center}
 .helper{color:var(--muted);font-size:0.95rem}
 .small{padding:8px 12px;font-size:0.95rem}
 .sample-note{font-size:0.9rem;color:var(--muted);margin-top:6px}

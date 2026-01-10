@@ -59,7 +59,7 @@ if(search){
 
 // Provide a manual Clear Saved Settings button on pages that include it
 (function(){
-  const known = ['theme','signatureName','signatureEmail','signatureEmailList','signatureEmailSelected','signature','signature_name','user_signature']
+  const known = ['theme','signatureName','signatureNameList','signatureNameSelected','signatureEmail','signatureEmailList','signatureEmailSelected','signature','signature_name','user_signature']
   document.addEventListener('DOMContentLoaded', ()=>{
     const btn = document.getElementById('clearSavedBtn')
     if(!btn) return
@@ -74,17 +74,45 @@ if(search){
 // Persist signatureName and manage signature email dropdown (add/delete/select)
 (function(){
   document.addEventListener('DOMContentLoaded', ()=>{
-    const sig = document.getElementById('signatureName')
+    const sigNameSelect = document.getElementById('signatureName')
+    const sigNameInput = document.getElementById('newSignatureName')
+    const addSigNameBtn = document.getElementById('addSignatureNameBtn')
+    const deleteSigNameBtn = document.getElementById('deleteSignatureNameBtn')
     const sigEmailSelect = document.getElementById('signatureEmail')
     const sigEmailInput = document.getElementById('newSignatureEmail')
     const addSigEmailBtn = document.getElementById('addSignatureEmailBtn')
     const deleteSigEmailBtn = document.getElementById('deleteSignatureEmailBtn')
     const indicator = document.getElementById('signatureSavedIndicator')
     const fields = [
-      {el: sig, key: 'signatureName'},
+      {el: sigNameSelect, key: 'signatureNameSelected'},
       {el: sigEmailSelect, key: 'signatureEmailSelected'}
     ].filter(f=>f.el)
     if(!fields.length) return
+
+    const loadNameList = ()=>{
+      try{ const raw = localStorage.getItem('signatureNameList'); return raw ? JSON.parse(raw) : [] }catch{ return [] }
+    }
+    const saveNameList = (list)=>localStorage.setItem('signatureNameList', JSON.stringify(list))
+    const setSelectedName = (val)=>{
+      localStorage.setItem('signatureNameSelected', val || '')
+      if(sigNameSelect) sigNameSelect.value = val || ''
+    }
+    const populateNameOptions = (selected)=>{
+      if(!sigNameSelect) return
+      const list = loadNameList()
+      sigNameSelect.innerHTML = ''
+      const placeholder = document.createElement('option')
+      placeholder.value = ''
+      placeholder.textContent = 'Select signature name…'
+      sigNameSelect.appendChild(placeholder)
+      list.forEach(name=>{
+        const opt = document.createElement('option')
+        opt.value = name
+        opt.textContent = name
+        sigNameSelect.appendChild(opt)
+      })
+      if(selected && list.includes(selected)) sigNameSelect.value = selected
+    }
 
     const loadEmailList = ()=>{
       try{ const raw = localStorage.getItem('signatureEmailList'); return raw ? JSON.parse(raw) : [] }catch{ return [] }
@@ -126,11 +154,16 @@ if(search){
       }
     }
 
-    // hydrate name
-    const storedName = localStorage.getItem('signatureName')
-    if(storedName && sig) sig.value = storedName
+    // hydrate name list & selection; migrate legacy single name
+    const storedNameList = loadNameList()
+    const legacyName = localStorage.getItem('signatureName')
+    if(legacyName && !storedNameList.includes(legacyName)) storedNameList.push(legacyName)
+    saveNameList(storedNameList)
+    const storedSelectedName = localStorage.getItem('signatureNameSelected') || legacyName || ''
+    populateNameOptions(storedSelectedName)
+    if(storedSelectedName && sigNameSelect) sigNameSelect.value = storedSelectedName
 
-    // hydrate list & selection; migrate legacy single email
+    // hydrate email list & selection; migrate legacy single email
     const storedList = loadEmailList()
     const legacyEmail = localStorage.getItem('signatureEmail')
     if(legacyEmail && !storedList.includes(legacyEmail)) storedList.push(legacyEmail)
@@ -139,11 +172,13 @@ if(search){
     populateEmailOptions(storedSelected)
     if(storedSelected && sigEmailSelect) sigEmailSelect.value = storedSelected
 
-    // listeners for name/select save
+    // listeners for name/email select save
     fields.forEach(({el,key})=>{
       el.addEventListener('input', ()=>{
         const v = el.value && el.value.trim()
-        if(key === 'signatureEmailSelected'){
+        if(key === 'signatureNameSelected'){
+          setSelectedName(v || '')
+        }else if(key === 'signatureEmailSelected'){
           setSelectedEmail(v || '')
         }else{
           if(v) { localStorage.setItem(key, v) }
@@ -153,6 +188,14 @@ if(search){
       })
     })
 
+    if(sigNameSelect){
+      sigNameSelect.addEventListener('change', ()=>{
+        setSelectedName(sigNameSelect.value)
+        updateIndicator()
+        window.dispatchEvent(new CustomEvent('signatureEmailChanged'))
+      })
+    }
+
     if(sigEmailSelect){
       sigEmailSelect.addEventListener('change', ()=>{
         setSelectedEmail(sigEmailSelect.value)
@@ -161,7 +204,41 @@ if(search){
       })
     }
 
-    // add/delete management
+    // add/delete name management
+    const addName = ()=>{
+      if(!sigNameInput) return
+      const val = sigNameInput.value && sigNameInput.value.trim()
+      if(!val) return
+      const list = loadNameList()
+      if(!list.includes(val)){ list.push(val); saveNameList(list) }
+      setSelectedName(val)
+      populateNameOptions(val)
+      updateIndicator()
+      sigNameInput.value = ''
+      window.dispatchEvent(new CustomEvent('signatureEmailChanged'))
+      console.log('Added name:', val)
+    }
+    const deleteName = ()=>{
+      if(!sigNameSelect) return
+      const current = sigNameSelect.value
+      if(!current) return
+      const list = loadNameList().filter(e=>e!==current)
+      saveNameList(list)
+      setSelectedName('')
+      populateNameOptions('')
+      updateIndicator()
+      window.dispatchEvent(new CustomEvent('signatureEmailChanged'))
+      console.log('Deleted name:', current)
+    }
+    if(addSigNameBtn) addSigNameBtn.addEventListener('click', addName)
+    if(deleteSigNameBtn) deleteSigNameBtn.addEventListener('click', deleteName)
+    if(sigNameInput){
+      sigNameInput.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){ e.preventDefault(); addName() }
+      })
+    }
+
+    // add/delete email management
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const addEmail = ()=>{
       if(!sigEmailInput) return
