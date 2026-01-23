@@ -86,6 +86,16 @@ const cannedTexts = {
     "Pipeline completed",
     "Post Verification done in Yoda Portal- Checking of SSL expiry in New Relic"
   ]
+    "FluentD Upgrade": [
+    "Actual Start time",
+    "Pre-check started for xxx",
+    "Pre-check completed successfully",
+    "Setting-up Jenkins parameters",
+    "Pipeline job started",
+    "Pipeline job started completed",
+    "Post checks started",
+    "Post checks completed"
+  ]
 }
 
 // DOM
@@ -338,3 +348,4 @@ changeNumber.addEventListener('input', ()=>{
 updateCannedOptions(); render(); timezone.dispatchEvent(new Event('change'))
 
 // keyboard: / focuses search input in main dashboard; keep default here for convenience
+
