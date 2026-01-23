@@ -85,7 +85,7 @@ const cannedTexts = {
     "Running of pipeline for updating SSL expiry in New Relic. ",
     "Pipeline completed",
     "Post Verification done in Yoda Portal- Checking of SSL expiry in New Relic"
-  ]
+  ],
     "FluentD Upgrade": [
     "Actual Start time",
     "Pre-check started for xxx",
@@ -348,4 +348,5 @@ changeNumber.addEventListener('input', ()=>{
 updateCannedOptions(); render(); timezone.dispatchEvent(new Event('change'))
 
 // keyboard: / focuses search input in main dashboard; keep default here for convenience
+
 
