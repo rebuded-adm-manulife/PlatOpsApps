@@ -16,20 +16,18 @@ const cannedTexts = {
     "Apply the deleted PDBs"
   ],
   "Istio Upgrade": [
-    "Prevalidation check and download core configs and scripts",
-    "Exported the work folder",
-    "Pre-upgrade validation commands run",
-    "Verify the env vars exported",
+    "Actual Start time",
     "Scale down error pods",
-    "Istio_canary_upgrade.sh executed",
-    "Verified the control plane version in logs",
-    "Verified all the pods are using new revision",
-    "Webhook configuration started",
-    "Namespace labeling started",
-    "Namespace labeling completed/verification started",
-    "Verification completed",
-    "Istio upgrade clean-up script started",
-    "Scale up error pods"
+    "Started building the pipeline",
+    "Pipeline started",
+    "Pipeline completed",
+    "Postcheck Completed",
+    "Scaling up the error pods",
+    "Pipeline failed due to ",
+    "Pipeline started again by",
+    "Engaged Kenneth",
+    "Deleted the pod",
+    "Kenneth asked to "
   ],
   "Config Server (RCS) Upgrade": [
     "Pre-checks done",
@@ -348,5 +346,6 @@ changeNumber.addEventListener('input', ()=>{
 updateCannedOptions(); render(); timezone.dispatchEvent(new Event('change'))
 
 // keyboard: / focuses search input in main dashboard; keep default here for convenience
+
 
 
