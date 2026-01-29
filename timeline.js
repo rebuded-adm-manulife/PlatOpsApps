@@ -114,7 +114,7 @@ const cannedTexts = {
     "End of pipeline",
     "Start of post check ",
     "Post checks started",
-    "End of chang"
+    "End of change"
   ] 
 }
 
