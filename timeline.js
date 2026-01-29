@@ -104,6 +104,17 @@ const cannedTexts = {
     "Start of post check ",
     "Post checks started",
     "End of change"
+  ], 
+   "Install Prisma Cloud Defender Twistlock": [
+    "Start time",
+    "Pre checking",
+    "Checking of clusters information",
+    "Preparing pipeline",
+    "Starting of pipeline ",
+    "End of pipeline",
+    "Start of post check ",
+    "Post checks started",
+    "End of chang"
   ] 
 }
 
