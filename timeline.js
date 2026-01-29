@@ -93,7 +93,18 @@ const cannedTexts = {
     "Pipeline job started completed",
     "Post checks started",
     "Post checks completed"
-  ]
+  ],
+    "Prisma Cloud Defender Upgrade": [
+    "Start time",
+    "Pre checking",
+    "Checking of clusters information",
+    "Preparing pipeline",
+    "Starting of pipeline ",
+    "End of pipeline",
+    "Start of post check ",
+    "Post checks started",
+    "End of change"
+  ] 
 }
 
 // DOM
@@ -346,6 +357,7 @@ changeNumber.addEventListener('input', ()=>{
 updateCannedOptions(); render(); timezone.dispatchEvent(new Event('change'))
 
 // keyboard: / focuses search input in main dashboard; keep default here for convenience
+
 
 
 
